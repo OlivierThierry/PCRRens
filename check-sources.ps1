@@ -10,12 +10,12 @@ $logHistory = [LogHistory]::new($logName, (Join-Path $PSScriptRoot "logs"), 30)
 
 $sourcesFile = ([IO.Path]::Combine("$PSScriptRoot", "data", "sources.json"))
 #$sourcesFile = ([IO.Path]::Combine("$PSScriptRoot", "data", "test-sources.json"))
-$logHistory.addLine("Loading sources from $($sourcesFile)")
+$logHistory.addLine("Chargement des sources de données depuis $($sourcesFile)")
 $sources = Get-Content -Raw -Path $sourcesFile | ConvertFrom-Json
 
 if($sources.count -eq 0)
 {
-    $logHistory.addErrorAndDisplay("No source found in $($sourcesFile), please add at least one source")
+    $logHistory.addErrorAndDisplay("Aucune source de données trouvée dans $($sourcesFile), veuillez en ajouter au moins une")
     exit
 }
 
@@ -23,17 +23,23 @@ $lastSourceDateListFile = ([IO.Path]::Combine("$PSScriptRoot", "lastSourceDateLi
 
 if(!(Test-Path -Path $lastSourceDateListFile))
 {
-    $logHistory.addLine("Last sources date file doesn't exists, a new one will automatically be created")
+    $logHistory.addLine("Fichier avec les dernières dates des sources non trouvé, un nouveau va être créé automatiquement")
     $lastSourceDateList = @()
 }
 else
 {
-    $logHistory.addLine("Last sources date file found, loading content...")
+    $logHistory.addLine("Fichier avec les dernières dates des sources trouvé, chargement...")
     $lastSourceDateList = [Array](Get-Content -Raw -Path $lastSourceDateListFile | ConvertFrom-JSON)
+
+    Write-Host "Etat des sources" -BackgroundColor:DarkGray
+    $lastSourceDateList | ForEach-Object {
+        Write-Host "$($_.name) => $($_.date)"
+    }
+    Write-Host ""
 }
 
 
-
+$logHistory.addLineAndDisplay("Début de la surveillance...")
 # Boucle infinie
 While ($true)
 {
