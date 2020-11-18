@@ -1,8 +1,9 @@
-# Documentation: http://woshub.com/parsing-html-webpages-with-powershell/
+﻿# Documentation: http://woshub.com/parsing-html-webpages-with-powershell/
 # https://www.pipehow.tech/invoke-webscrape/
 
 . ([IO.Path]::Combine("$PSScriptRoot", "include", "func.inc.ps1"))
 . ([IO.Path]::Combine("$PSScriptRoot", "include", "LogHistory.inc.ps1"))
+
 
 $logName = "sources"
 $logHistory = [LogHistory]::new($logName, (Join-Path $PSScriptRoot "logs"), 30)
@@ -39,7 +40,7 @@ While ($true)
 
     Foreach ($source in $sources)
     {
-        $logHistory.addLine("Checking $($source.name)...")
+        $logHistory.addLine("Contrôle de $($source.name)...")
 
         $response = Invoke-WebRequest -uri $source.url
 
@@ -56,21 +57,21 @@ While ($true)
             }
         }
 
-        $logHistory.addLine("> Looking for update date in webpage ($($source.url))")
+        $logHistory.addLine("> Recherche de la date de mise à jour de la page $($source.url)")
         $cmd = '$result = $response.{0} | Where-Object {{ {1} }}' -f $checkIn, ($conditions -join " -and ")
         Invoke-Expression $cmd
 
         # Si pas de résultat trouvé
         if($null -eq $result)
         {
-            $logHistory.addWarningAndDisplay("Cannot find node in HTML DOM, please check 'searchFilters' values in sources file ($($sourcesFile))")
+            $logHistory.addWarningAndDisplay("Pas possible de trouver l'élément contenant l'information dans la page. Veuillez contrôler la valeur de 'searchFilters' dans le fichier de configuration ($($sourcesFile))")
             continue
         }
 
         # Si les filtres définis ne sont pas assez précis et que plusieurs résultats sont renvoyés,
         if($result -is [System.Array])
         {
-            $logHistory.addWarningAndDisplay("More than one node found in HTML DOM, please check 'searchFilters' values in sources file ($($sourcesFile)) to add more precision in search")
+            $logHistory.addWarningAndDisplay("Plus d'un élément pouvant contenir l'information de trouvé. Veuillez contrôler la valeur de 'searchFilters'  dans le fichier ($($sourcesFile)) pour ajouter plus de précision à la recherche")
             continue
         }
 
@@ -84,11 +85,11 @@ While ($true)
 
             if($webSourceDate -eq "")
             {
-                $logHistory.addWarningAndDisplay("Web source date is empty, please check regex in JSON file")
+                $logHistory.addWarningAndDisplay("La recherche de la date sur la page web n'a rien donné, veuillez contrôler la valeur de 'dateRegex' pour la source courante dans le fichier JSON")
                 continue
             }
 
-            $logHistory.addLine("> Last web page update is ($($webSourceDate))")
+            $logHistory.addLine("> Dernière mise à jour de la page: $($webSourceDate)")
             # Si date présente dans le fichier de log et différente de la courante
             # OU
             # date pas présente dans le fichier log
@@ -97,12 +98,25 @@ While ($true)
                 -or `
                 ($null -eq $sourceInfos))
             {
-                $logHistory.addLine("> Web page has been updated since last check")
+                $logHistory.addLine("> La page a été mise à jour depuis la dernière vérification")
                 
                 
                 Write-Host ("{0} - " -f (Get-Date -format "yyyy-MM-dd HH:mm:ss")) -NoNewline -ForegroundColor:Green
-                Write-host "'$($source.name)' source updated! ($($webSourceDate))`n$($source.url)"
+                Write-host "'$($source.name)' mis à jour! => $($webSourceDate)`n$($source.url)"
+
+                if($source.actions.Count -gt 0)
+                {
+                    # Affichage des actions à entreprendre
+                    Write-Host "Actions à entreprendre:" -BackgroundColor:DarkGray 
+                    $stepNo = 1
+                    $source.actions | ForEach-Object {
+                        Write-Host "$($stepNo): $($_)"
+                        $stepNo++
+                    }
+                }
+                
                 Write-Host ""
+
                 # On fait une petite alerte sonore pour notifier de la mise à jour
                 soundAlert
             }
@@ -139,12 +153,12 @@ While ($true)
         }
         else # Pas pu trouver de date
         {
-            $logHistory.addWarningAndDisplay("Cannot find update date, please check regex in JSON file")
+            $logHistory.addWarningAndDisplay("Pas possible de trouver la date de mise à jour, veuillez contrôler la valeur de 'dateRegex' pour la source courante dans le fichier JSON de configuration")
         }
 
     }
 
     $sleepMin = 10
-    $logHistory.addLine("All sources have been checked, sleeping $($sleepMin) until next check...")
+    $logHistory.addLine("Toutes les sources ont été contrôlées... attente de $($sleepMin) minutes jusqu'au prochain contrôle...")
     Start-Sleep -Seconds (60 * $sleepMin)
 }
