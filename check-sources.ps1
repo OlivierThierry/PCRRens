@@ -100,7 +100,7 @@ While ($true)
                 $logHistory.addLine("> Web page has been updated since last check")
                 
                 
-                Write-Host ">> " -NoNewline -ForegroundColor:Green
+                Write-Host ("{0} - " -f (Get-Date -format "yyyy-MM-dd HH:mm:ss")) -NoNewline -ForegroundColor:Green
                 Write-host "'$($source.name)' source updated! ($($webSourceDate))`n$($source.url)"
                 Write-Host ""
                 # On fait une petite alerte sonore pour notifier de la mise à jour
