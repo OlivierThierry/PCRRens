@@ -101,20 +101,30 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
 $logName = "sources"
 $logHistory = [LogHistory]::new($logName, (Join-Path $PSScriptRoot "logs"), 30)
 
+
+# -------------------------------
+# Chargement des sources de données
 $webSourcesFile = ([IO.Path]::Combine("$PSScriptRoot", "data", "web-sources.json"))
 #$webSourcesFile = ([IO.Path]::Combine("$PSScriptRoot", "data", "test-sources.json"))
-$logHistory.addLine("Chargement des sources de données depuis $($webSourcesFile)")
+$logHistory.addLine("Chargement des sources de données 'web' depuis $($webSourcesFile)")
 $webSources = Get-Content -Raw -Path $webSourcesFile | ConvertFrom-Json
 
-if($webSources.count -eq 0)
+$fileSourcesFile = ([IO.Path]::Combine("$PSScriptRoot", "data", "file-sources.json"))
+#$webSourcesFile = ([IO.Path]::Combine("$PSScriptRoot", "data", "test-sources.json"))
+$logHistory.addLine("Chargement des sources de données 'file' depuis $($fileSourcesFile)")
+$fileSources = Get-Content -Raw -Path $fileSourcesFile | ConvertFrom-Json
+
+# Si aucune source
+if(($webSources.count -eq 0) -and ($fileSources.count -eq 0))
 {
-    $logHistory.addErrorAndDisplay("Aucune source de données trouvée dans $($webSourcesFile), veuillez en ajouter au moins une")
+    $logHistory.addErrorAndDisplay("Aucune source de données trouvée dans $($webSourcesFile) ou $($fileSourcesFile), veuillez en ajouter au moins une")
     exit
 }
 
-$webSourcesStatusFile = ([IO.Path]::Combine("$PSScriptRoot", "data", "web-sources-status.json"))
-
-if(!(Test-Path -Path $webSourcesStatusFile))
+# -------------------------------
+# Chargement du statut des différentes sources
+$sourcesStatusFile = ([IO.Path]::Combine("$PSScriptRoot", "data", "sources-status.json"))
+if(!(Test-Path -Path $sourcesStatusFile))
 {
     $logHistory.addLine("Fichier avec les dernières dates des sources non trouvé, un nouveau va être créé automatiquement")
     $sourceStatusList = @()
@@ -122,21 +132,22 @@ if(!(Test-Path -Path $webSourcesStatusFile))
 else
 {
     $logHistory.addLine("Fichier avec les dernières dates des sources trouvé, chargement...")
-    $sourceStatusList = [Array](Get-Content -Raw -Path $webSourcesStatusFile | ConvertFrom-JSON )
+    $sourceStatusList = [Array](Get-Content -Raw -Path $sourcesStatusFile | ConvertFrom-JSON )
 
     Write-Host "Etat des sources" -BackgroundColor:DarkGray
     $sourceStatusList | ForEach-Object {
-        Write-Host "$($_.name) => $($_.date)"
+        Write-Host "$($_.name) ($($_.sourceType)) => $($_.date)"
     }
     Write-Host ""
 }
 
 
+# -------------------------------
+# Et on démarre
 $logHistory.addLineAndDisplay("Début de la surveillance...")
 # Boucle infinie
 While ($true)
 {
-
     Foreach ($source in $webSources)
     {
         $logHistory.addLine("Contrôle de $($source.name)...")
@@ -191,7 +202,7 @@ While ($true)
             # Contrôle si la source a changé
             $sourceStatusList = checkIfChanged -sourceStatusList $sourceStatusList -source $source -sourceDate $sourceDate -sourceType ([sourceType]::web)
             # Mise à jour du fichier
-            $sourceStatusList | ConvertTo-Json | Out-file $webSourcesStatusFile -Encoding:utf8
+            $sourceStatusList | ConvertTo-Json | Out-file $sourcesStatusFile -Encoding:utf8
         }
         else # Pas pu trouver de date
         {
