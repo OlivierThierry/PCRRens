@@ -8,20 +8,20 @@
 $logName = "sources"
 $logHistory = [LogHistory]::new($logName, (Join-Path $PSScriptRoot "logs"), 30)
 
-$sourcesFile = ([IO.Path]::Combine("$PSScriptRoot", "data", "sources.json"))
-#$sourcesFile = ([IO.Path]::Combine("$PSScriptRoot", "data", "test-sources.json"))
-$logHistory.addLine("Chargement des sources de données depuis $($sourcesFile)")
-$sources = Get-Content -Raw -Path $sourcesFile | ConvertFrom-Json
+$webSourcesFile = ([IO.Path]::Combine("$PSScriptRoot", "data", "web-sources.json"))
+#$webSourcesFile = ([IO.Path]::Combine("$PSScriptRoot", "data", "test-sources.json"))
+$logHistory.addLine("Chargement des sources de données depuis $($webSourcesFile)")
+$webSources = Get-Content -Raw -Path $webSourcesFile | ConvertFrom-Json
 
-if($sources.count -eq 0)
+if($webSources.count -eq 0)
 {
-    $logHistory.addErrorAndDisplay("Aucune source de données trouvée dans $($sourcesFile), veuillez en ajouter au moins une")
+    $logHistory.addErrorAndDisplay("Aucune source de données trouvée dans $($webSourcesFile), veuillez en ajouter au moins une")
     exit
 }
 
-$lastSourceDateListFile = ([IO.Path]::Combine("$PSScriptRoot", "lastSourceDateList.json"))
+$webSourcesStatusFile = ([IO.Path]::Combine("$PSScriptRoot", "data", "web-sources-status.json"))
 
-if(!(Test-Path -Path $lastSourceDateListFile))
+if(!(Test-Path -Path $webSourcesStatusFile))
 {
     $logHistory.addLine("Fichier avec les dernières dates des sources non trouvé, un nouveau va être créé automatiquement")
     $lastSourceDateList = @()
@@ -29,7 +29,7 @@ if(!(Test-Path -Path $lastSourceDateListFile))
 else
 {
     $logHistory.addLine("Fichier avec les dernières dates des sources trouvé, chargement...")
-    $lastSourceDateList = [Array](Get-Content -Raw -Path $lastSourceDateListFile | ConvertFrom-JSON)
+    $lastSourceDateList = [Array](Get-Content -Raw -Path $webSourcesStatusFile | ConvertFrom-JSON)
 
     Write-Host "Etat des sources" -BackgroundColor:DarkGray
     $lastSourceDateList | ForEach-Object {
@@ -44,7 +44,7 @@ $logHistory.addLineAndDisplay("Début de la surveillance...")
 While ($true)
 {
 
-    Foreach ($source in $sources)
+    Foreach ($source in $webSources)
     {
         $logHistory.addLine("Contrôle de $($source.name)...")
 
@@ -70,14 +70,14 @@ While ($true)
         # Si pas de résultat trouvé
         if($null -eq $result)
         {
-            $logHistory.addWarningAndDisplay("Pas possible de trouver l'élément contenant l'information dans la page. Veuillez contrôler la valeur de 'searchFilters' dans le fichier de configuration ($($sourcesFile))")
+            $logHistory.addWarningAndDisplay("Pas possible de trouver l'élément contenant l'information dans la page. Veuillez contrôler la valeur de 'searchFilters' dans le fichier de configuration ($($webSourcesFile))")
             continue
         }
 
         # Si les filtres définis ne sont pas assez précis et que plusieurs résultats sont renvoyés,
         if($result -is [System.Array])
         {
-            $logHistory.addWarningAndDisplay("Plus d'un élément pouvant contenir l'information de trouvé. Veuillez contrôler la valeur de 'searchFilters'  dans le fichier ($($sourcesFile)) pour ajouter plus de précision à la recherche")
+            $logHistory.addWarningAndDisplay("Plus d'un élément pouvant contenir l'information de trouvé. Veuillez contrôler la valeur de 'searchFilters'  dans le fichier ($($webSourcesFile)) pour ajouter plus de précision à la recherche")
             continue
         }
 
@@ -155,7 +155,7 @@ While ($true)
             $lastSourceDateList += $newSourceInfos
 
             # Mise à jour du fichier Log
-            $lastSourceDateList | ConvertTo-Json | Out-file $lastSourceDateListFile -Encoding:utf8
+            $lastSourceDateList | ConvertTo-Json | Out-file $webSourcesStatusFile -Encoding:utf8
         }
         else # Pas pu trouver de date
         {
