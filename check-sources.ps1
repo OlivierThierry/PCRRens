@@ -37,7 +37,7 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
         
         
         Write-Host ("{0} - " -f (Get-Date -format "yyyy-MM-dd HH:mm:ss")) -NoNewline -ForegroundColor:Green
-        Write-host "'$($source.name)' mis à jour! => $($sourceDate)`n$($source.url)"
+        Write-host "'$($source.name)' mis à jour! => $($sourceDate)`n$($source.location)"
 
         if($source.actions.Count -gt 0)
         {
@@ -62,7 +62,7 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
         date = $sourceDate
         lastCheck = (Get-Date).ToString()
     }
-    
+
     # Si on a des informations pour la source dans le fichier log
     if($null -ne $sourceStatus)
     {
@@ -133,7 +133,7 @@ While ($true)
     {
         $logHistory.addLine("Contrôle de $($source.name)...")
 
-        $response = Invoke-WebRequest -uri $source.url
+        $response = Invoke-WebRequest -uri $source.location
 
         $checkIn = "AllElements"
         $conditions = @()
@@ -148,7 +148,7 @@ While ($true)
             }
         }
 
-        $logHistory.addLine("> Recherche de la date de mise à jour de la page $($source.url)")
+        $logHistory.addLine("> Recherche de la date de mise à jour de la page $($source.location)")
         $cmd = '$result = $response.{0} | Where-Object {{ {1} }}' -f $checkIn, ($conditions -join " -and ")
         Invoke-Expression $cmd
 
