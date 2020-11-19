@@ -5,6 +5,10 @@
 . ([IO.Path]::Combine("$PSScriptRoot", "include", "LogHistory.inc.ps1"))
 
 
+Enum sourceType {
+    web
+    file
+}
 <#
  ------------------------------------------------------------------------------------------------
  --------------------------------- FONCTIONS ------------------------------------------
@@ -19,22 +23,24 @@
     IN  : $source                   -> Objet représentant la source que l'on est en train de contrôler. Provient d'un 
                                         fichier JSON
     IN  : $sourceDate               -> Date trouvée pour la source à l'endroit où on doit la chercher
+    IN  : $sourceType               -> Type de la source (web, fichier, etc...)
 
     RET : Objet $sourceStatusList mis à jour
 #>
-function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$sourceDate)
+function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$sourceDate, [sourceType]$sourceType)
 {
     $logHistory.addLine("> Dernière mise à jour de la source: $($sourceDate)")
     # Si date présente dans le fichier de log et différente de la courante
     # OU
     # date pas présente dans le fichier log
-    $sourceStatus = $sourceStatusList | Where-Object { $_.name -eq $source.name}
+    $sourceStatus = $sourceStatusList | Where-Object { 
+        ($_.name -eq $source.name) -and ($_.sourceType -eq $sourceType.toString())}
+    
     if((($null -ne $sourceStatus) -and ($sourceStatus.date -ne $sourceDate) ) `
         -or `
         ($null -eq $sourceStatus))
     {
         $logHistory.addLine("> La source a été mise à jour depuis la dernière vérification")
-        
         
         Write-Host ("{0} - " -f (Get-Date -format "yyyy-MM-dd HH:mm:ss")) -NoNewline -ForegroundColor:Green
         Write-host "'$($source.name)' mis à jour! => $($sourceDate)`n$($source.location)"
@@ -61,13 +67,15 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
         name = $source.name
         date = $sourceDate
         lastCheck = (Get-Date).ToString()
+        sourceType = $sourceType.ToString()
     }
 
     # Si on a des informations pour la source dans le fichier log
     if($null -ne $sourceStatus)
     {
         # On supprime juste l'élément du tableau et on ajoute le nouveau (on met à jour en fait)
-        $sourceStatusList = [Array]($sourceStatusList | Where-Object { $_.name -ne $sourceStatus.name})
+        $sourceStatusList = [Array]($sourceStatusList | Where-Object { 
+            ($_.name -ne $sourceStatus.name) -and ($_.sourceType -eq $sourceType.ToString())})
 
         # Si c'est égal à $null, c'est qu'il n'y a plus aucun élément donc on recréé un tableau vide
         if($null -eq $sourceStatusList)
@@ -181,7 +189,7 @@ While ($true)
             }
             
             # Contrôle si la source a changé
-            $sourceStatusList = checkIfChanged -sourceStatusList $sourceStatusList -source $source -sourceDate $sourceDate
+            $sourceStatusList = checkIfChanged -sourceStatusList $sourceStatusList -source $source -sourceDate $sourceDate -sourceType ([sourceType]::web)
             # Mise à jour du fichier
             $sourceStatusList | ConvertTo-Json | Out-file $webSourcesStatusFile -Encoding:utf8
         }
