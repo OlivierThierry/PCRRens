@@ -5,6 +5,95 @@
 . ([IO.Path]::Combine("$PSScriptRoot", "include", "LogHistory.inc.ps1"))
 
 
+<#
+ ------------------------------------------------------------------------------------------------
+ --------------------------------- FONCTIONS ------------------------------------------
+#>
+
+
+<#
+    BUT : Contrôle si une source a changé au vu de la date de sa dernière modification
+
+    IN  : $lastSourceDataList       -> tableau avec la liste des dernières dates de modification pour les sources.
+                                        On doit pouvoir y stocker (et trouver si elle existe) la source $source
+    IN  : $source                   -> Objet représentant la source que l'on est en train de contrôler. Provient d'un 
+                                        fichier JSON
+    IN  : $webSourceData            -> Date trouvée pour la source à l'endroit où on doit la chercher
+
+    RET : Objet $lastSourceDateList mis à jour
+#>
+function checkIfChanged([Array]$lastSourceDateList, [PSObject]$source, [string]$webSourceDate)
+{
+    $logHistory.addLine("> Dernière mise à jour de la source: $($webSourceDate)")
+    # Si date présente dans le fichier de log et différente de la courante
+    # OU
+    # date pas présente dans le fichier log
+    $sourceInfos = $lastSourceDateList | Where-Object { $_.name -eq $source.name}
+    if((($null -ne $sourceInfos) -and ($sourceInfos.date -ne $webSourceDate) ) `
+        -or `
+        ($null -eq $sourceInfos))
+    {
+        $logHistory.addLine("> La source a été mise à jour depuis la dernière vérification")
+        
+        
+        Write-Host ("{0} - " -f (Get-Date -format "yyyy-MM-dd HH:mm:ss")) -NoNewline -ForegroundColor:Green
+        Write-host "'$($source.name)' mis à jour! => $($webSourceDate)`n$($source.url)"
+
+        if($source.actions.Count -gt 0)
+        {
+            # Affichage des actions à entreprendre
+            Write-Host "Actions à entreprendre:" -BackgroundColor:DarkGray 
+            $stepNo = 1
+            $source.actions | ForEach-Object {
+                Write-Host "$($stepNo): $($_)"
+                $stepNo++
+            }
+        }
+        
+        Write-Host ""
+
+        # On fait une petite alerte sonore pour notifier de la mise à jour
+        soundAlert
+    }
+
+    # Pour mettre à jour les infos dans le fichier log
+    $newSourceInfos = @{
+        name = $source.name
+        date = $webSourceDate
+        lastCheck = (Get-Date).ToString()
+    }
+    # Si on a des informations pour la source dans le fichier log
+    if($null -ne $sourceInfos)
+    {
+        # On supprime juste l'élément du tableau
+        $lastSourceDateList = ($lastSourceDateList | Where-Object { $_.name -ne $source.name})
+        # Si plus aucun élément,
+        if($null -eq $lastSourceDateList)
+        {
+            # On est obligé de refaire en sorte que ça soit un tableau... les joies de PowerShell
+            $lastSourceDateList = @()
+        }
+        # S'il n'y a plus qu'un élément, ça va nous renvoyer un seul élément et pas un tableau... encore une joie de PowerShell
+        elseif($lastSourceDateList -isnot [Array])
+        {
+            # On retransforme donc en tableau
+            $lastSourceDateList = @($lastSourceDateList)
+        }
+    }
+
+    $lastSourceDateList += $newSourceInfos
+
+    return $lastSourceDateList
+}
+
+
+
+<#
+ ------------------------------------------------------------------------------------------------
+ --------------------------------- PROGRAMME PRINCIPAL ------------------------------------------
+#>
+
+
 $logName = "sources"
 $logHistory = [LogHistory]::new($logName, (Join-Path $PSScriptRoot "logs"), 30)
 
@@ -94,67 +183,10 @@ While ($true)
                 $logHistory.addWarningAndDisplay("La recherche de la date sur la page web n'a rien donné, veuillez contrôler la valeur de 'dateRegex' pour la source courante dans le fichier JSON")
                 continue
             }
-
-            $logHistory.addLine("> Dernière mise à jour de la page: $($webSourceDate)")
-            # Si date présente dans le fichier de log et différente de la courante
-            # OU
-            # date pas présente dans le fichier log
-            $sourceInfos = $lastSourceDateList | Where-Object { $_.name -eq $source.name}
-            if((($null -ne $sourceInfos) -and ($sourceInfos.date -ne $webSourceDate) ) `
-                -or `
-                ($null -eq $sourceInfos))
-            {
-                $logHistory.addLine("> La page a été mise à jour depuis la dernière vérification")
-                
-                
-                Write-Host ("{0} - " -f (Get-Date -format "yyyy-MM-dd HH:mm:ss")) -NoNewline -ForegroundColor:Green
-                Write-host "'$($source.name)' mis à jour! => $($webSourceDate)`n$($source.url)"
-
-                if($source.actions.Count -gt 0)
-                {
-                    # Affichage des actions à entreprendre
-                    Write-Host "Actions à entreprendre:" -BackgroundColor:DarkGray 
-                    $stepNo = 1
-                    $source.actions | ForEach-Object {
-                        Write-Host "$($stepNo): $($_)"
-                        $stepNo++
-                    }
-                }
-                
-                Write-Host ""
-
-                # On fait une petite alerte sonore pour notifier de la mise à jour
-                soundAlert
-            }
-
-            # Pour mettre à jour les infos dans le fichier log
-            $newSourceInfos = @{
-                name = $source.name
-                date = $webSourceDate
-                lastCheck = (Get-Date).ToString()
-            }
-            # Si on a des informations pour la source dans le fichier log
-            if($null -ne $sourceInfos)
-            {
-                # On supprime juste l'élément du tableau
-                $lastSourceDateList = ($lastSourceDateList | Where-Object { $_.name -ne $source.name})
-                # Si plus aucun élément,
-                if($null -eq $lastSourceDateList)
-                {
-                    # On est obligé de refaire en sorte que ça soit un tableau... les joies de PowerShell
-                    $lastSourceDateList = @()
-                }
-                # S'il n'y a plus qu'un élément, ça va nous renvoyer un seul élément et pas un tableau... encore une joie de PowerShell
-                elseif($lastSourceDateList -isnot [Array])
-                {
-                    # On retransforme donc en tableau
-                    $lastSourceDateList = @($lastSourceDateList)
-                }
-            }
-
-            $lastSourceDateList += $newSourceInfos
-
-            # Mise à jour du fichier Log
+            
+            # Contrôle si la source a changé
+            $lastSourceDateList = checkIfChanged -lastSourceDateList $lastSourceDateList -source $source -webSourceDate $webSourceDate
+            # Mise à jour du fichier
             $lastSourceDateList | ConvertTo-Json | Out-file $webSourcesStatusFile -Encoding:utf8
         }
         else # Pas pu trouver de date
@@ -162,7 +194,7 @@ While ($true)
             $logHistory.addWarningAndDisplay("Pas possible de trouver la date de mise à jour, veuillez contrôler la valeur de 'dateRegex' pour la source courante dans le fichier JSON de configuration")
         }
 
-    }
+    }# FIN BOUCLE de parcours des sources
 
     $sleepMin = 10
     $logHistory.addLine("Toutes les sources ont été contrôlées... attente de $($sleepMin) minutes jusqu'au prochain contrôle...")
