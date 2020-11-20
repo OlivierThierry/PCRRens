@@ -2,7 +2,7 @@
 # https://www.pipehow.tech/invoke-webscrape/
 
 . ([IO.Path]::Combine("$PSScriptRoot", "include", "func.inc.ps1"))
-. ([IO.Path]::Combine("$PSScriptRoot", "include", "CallbackFunc.inc.ps1"))
+. ([IO.Path]::Combine("$PSScriptRoot", "include", "WebCallbackFunc.inc.ps1"))
 . ([IO.Path]::Combine("$PSScriptRoot", "include", "LogHistory.inc.ps1"))
 
 
@@ -217,7 +217,7 @@ $speechSynthesizer = New-Object –TypeName System.Speech.Synthesis.SpeechSynthe
 $logName = "sources"
 $logHistory = [LogHistory]::new($logName, (Join-Path $PSScriptRoot "logs"), 30)
 # Objet contenant les fonctions à appeler lorsqu'une source de donnée change
-$callbackFunc = [CallbackFunc]::new($global:OUTPUT_FOLDER)
+$webCallbackFunc = [WebCallbackFunc]::new($global:OUTPUT_FOLDER)
 
 # Pour contenir toutes les sources
 $allSources = @{}
@@ -311,7 +311,7 @@ While ($true)
                     if($sourceTypeEnum -eq [sourceType]::web -and $source.callbackFunc -ne "")
                     {
                         # Création de la commande 
-                        $cmd = '$outFile = $callbackFunc.{0}($source)' -f $source.callbackFunc
+                        $cmd = '$outFile = $webCallbackFunc.{0}($source)' -f $source.callbackFunc
                         Invoke-Expression $cmd
                         Write-Host "Un fichier de données a été généré depuis la page web, il peut être trouvé ici:`n$($outFile)"
                         

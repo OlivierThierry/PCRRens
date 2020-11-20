@@ -75,11 +75,11 @@
         ],
         "dateRegex": ".*?([0-9]{2,2} [a-zA-Z]+ [0-9]{4,4}).*?",
         "actions": [
-            "Mettre à jour les données sur le calque 'Situation actuelle'",
+            "Mettre à jour les données sur le calque 'Situation actuelle' à l'aide du contenu du fichier CSV généré",
             "Télécharger le fichier PDf sur la page web",
             "Mettre à jour le PowerPoint qui passe sur la TV avec les nouveaux graphiques présents dans le PDF"
         ],
-        "textToSpeech": "Covid 19 for Switzerland web page has been updated",
+        "textToSpeech": "Covid 19 for Switzerland web page has been updated. Please have a look at CSV generated file.",
         "callbackFunc": "extractActualSituationCH"
     },
     {
