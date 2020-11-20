@@ -16,6 +16,7 @@ Enum sourceType {
 
 
 <#
+    ---------------------------------------------------------------------------------------------
     BUT : Contrôle si une source a changé au vu de la date de sa dernière modification
 
     IN  : $sourceStatusList         -> tableau avec la liste des dernières dates de modification pour les sources.
@@ -90,13 +91,16 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
     return $sourceStatusList
 }
 
+
 <#
+    ---------------------------------------------------------------------------------------------
     BUT : Gère une source web
 
     IN  : $source                   -> Objet représentant la source que l'on est en train de contrôler. Provient d'un 
                                         fichier JSON
 
-    RET : Objet $sourceStatusList mis à jour
+    RET : La date de mise à jour de la source
+            $null si pas trouvé ou erreur
 #>
 function handleWebSource([PSObject]$source)
 {
@@ -158,6 +162,31 @@ function handleWebSource([PSObject]$source)
     return $null
 }
 
+
+<#
+    ---------------------------------------------------------------------------------------------
+    BUT : Gère une source fichier
+
+    IN  : $source       -> Objet représentant la source que l'on est en train de contrôler. Provient d'un 
+                            fichier JSON
+
+    RET : Date de mise à jour du fichier
+#>
+function handleFileSource([PSObject]$source)
+{
+    $logHistory.addLine("Contrôle de la date de modification de la source $($source.name) ('$($source.location)')")
+    # Si le fichier existe
+    if(Test-Path -Path $source.location)
+    {
+        return (Get-Item -path $source.location).LastWriteTime.ToString()
+    }
+    else 
+    {
+        $logHistory.addWarningAndDisplay("Source $($source.name): Le fichier '$($source.location)' n'existe pas")
+    }
+
+    return $null
+}
 
 
 <#
@@ -233,8 +262,7 @@ While ($true)
         {
             $logHistory.addLine("Contrôle de $($source.name)...")
 
-            
-
+            # En fonction du type de source (voir la définition du type enuméré 'sourceType')
             switch($sourceTypeEnum)
             {
                 # Sources de type "page web"
@@ -246,7 +274,7 @@ While ($true)
                 # Sources de types "fichier"
                 file
                 {
-                    $sourceDate = $null 
+                    $sourceDate = handleFileSource -source $source
                 }
             }
 
