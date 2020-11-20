@@ -90,6 +90,74 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
     return $sourceStatusList
 }
 
+<#
+    BUT : Gère une source web
+
+    IN  : $source                   -> Objet représentant la source que l'on est en train de contrôler. Provient d'un 
+                                        fichier JSON
+
+    RET : Objet $sourceStatusList mis à jour
+#>
+function handleWebSource([PSObject]$source)
+{
+    $response = Invoke-WebRequest -uri $source.location
+
+    $checkIn = "AllElements"
+    $conditions = @()
+    $source.searchFilters | Foreach-Object { 
+        $conditions += ('$_.{0} {1} "{2}"' -f $_.attribute, $_.operator, $_.value)
+
+        # Si l'élément qu'on cherche est un lien, on fait en sorte de ne chercher que parmis
+        # les liens par la suite.
+        if(($_.attribute -eq "tagName") -and ($_.value -eq "a"))
+        {
+            $checkIn = "Links"
+        }
+    }
+
+    $logHistory.addLine("> Recherche de la date de mise à jour de la page $($source.location)")
+    $cmd = '$result = $response.{0} | Where-Object {{ {1} }}' -f $checkIn, ($conditions -join " -and ")
+    Invoke-Expression $cmd
+
+    # Si pas de résultat trouvé
+    if($null -eq $result)
+    {
+        $logHistory.addWarningAndDisplay("Pas possible de trouver l'élément contenant l'information dans la page. Veuillez contrôler la valeur de 'searchFilters' dans le fichier de configuration ($($webSourcesFile))")
+        continue
+    }
+
+    # Si les filtres définis ne sont pas assez précis et que plusieurs résultats sont renvoyés,
+    if($result -is [System.Array])
+    {
+        $logHistory.addWarningAndDisplay("Plus d'un élément pouvant contenir l'information de trouvé. Veuillez contrôler la valeur de 'searchFilters'  dans le fichier ($($webSourcesFile)) pour ajouter plus de précision à la recherche")
+        continue
+    }
+
+    # Tentative d'extraire la date de mise à jour
+    $regexSearch = [Regex]::Match($result.innerText, $source.dateRegex)
+
+    # Si on a pu trouver la date de mise à jour
+    if($regexSearch.Success)
+    {
+        $sourceDate = $regexSearch.Groups[$regexSearch.Groups.count-1].Value.Trim()
+
+        if($sourceDate -eq "")
+        {
+            $logHistory.addWarningAndDisplay("La recherche de la date sur la page web n'a rien donné, veuillez contrôler la valeur de 'dateRegex' pour la source courante dans le fichier JSON")
+            return $null
+        }
+        
+        return $sourceDate
+        
+    }
+    else # Pas pu trouver de date
+    {
+        $logHistory.addWarningAndDisplay("Pas possible de trouver la date de mise à jour, veuillez contrôler la valeur de 'dateRegex' pour la source courante dans le fichier JSON de configuration")
+    }
+
+    return $null
+}
+
 
 
 <#
@@ -101,6 +169,8 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
 $logName = "sources"
 $logHistory = [LogHistory]::new($logName, (Join-Path $PSScriptRoot "logs"), 30)
 
+# Pour contenir toutes les sources
+$allSources = @{}
 
 # -------------------------------
 # Chargement des sources de données
@@ -120,6 +190,11 @@ if(($webSources.count -eq 0) -and ($fileSources.count -eq 0))
     $logHistory.addErrorAndDisplay("Aucune source de données trouvée dans $($webSourcesFile) ou $($fileSourcesFile), veuillez en ajouter au moins une")
     exit
 }
+
+# Ajout de la source
+$allSources.add(([sourceType]::web).ToString(), $webSources )
+$allSources.add(([sourceType]::file).toString(), $fileSources)
+
 
 # -------------------------------
 # Chargement du statut des différentes sources
@@ -142,74 +217,52 @@ else
 }
 
 
-# -------------------------------
+
+# ----------------------------------------------------------
 # Et on démarre
 $logHistory.addLineAndDisplay("Début de la surveillance...")
 # Boucle infinie
 While ($true)
 {
-    Foreach ($source in $webSources)
+    # Parcours des types de sources qu'on a 
+    ForEach($sourceType in $allSources.Keys)
     {
-        $logHistory.addLine("Contrôle de $($source.name)...")
-
-        $response = Invoke-WebRequest -uri $source.location
-
-        $checkIn = "AllElements"
-        $conditions = @()
-        $source.searchFilters | Foreach-Object { 
-            $conditions += ('$_.{0} {1} "{2}"' -f $_.attribute, $_.operator, $_.value)
-
-            # Si l'élément qu'on cherche est un lien, on fait en sorte de ne chercher que parmis
-            # les liens par la suite.
-            if(($_.attribute -eq "tagName") -and ($_.value -eq "a"))
-            {
-                $checkIn = "Links"
-            }
-        }
-
-        $logHistory.addLine("> Recherche de la date de mise à jour de la page $($source.location)")
-        $cmd = '$result = $response.{0} | Where-Object {{ {1} }}' -f $checkIn, ($conditions -join " -and ")
-        Invoke-Expression $cmd
-
-        # Si pas de résultat trouvé
-        if($null -eq $result)
+        $sourceTypeEnum = [sourceType]$sourceType
+        # Parcours des sources pour le type courant
+        Foreach ($source in $allSources.$sourceType)
         {
-            $logHistory.addWarningAndDisplay("Pas possible de trouver l'élément contenant l'information dans la page. Veuillez contrôler la valeur de 'searchFilters' dans le fichier de configuration ($($webSourcesFile))")
-            continue
-        }
+            $logHistory.addLine("Contrôle de $($source.name)...")
 
-        # Si les filtres définis ne sont pas assez précis et que plusieurs résultats sont renvoyés,
-        if($result -is [System.Array])
-        {
-            $logHistory.addWarningAndDisplay("Plus d'un élément pouvant contenir l'information de trouvé. Veuillez contrôler la valeur de 'searchFilters'  dans le fichier ($($webSourcesFile)) pour ajouter plus de précision à la recherche")
-            continue
-        }
-
-        # Tentative d'extraire la date de mise à jour
-        $regexSearch = [Regex]::Match($result.innerText, $source.dateRegex)
-
-        # Si on a pu trouver un résultat
-        if($regexSearch.Success)
-        {
-            $sourceDate = $regexSearch.Groups[$regexSearch.Groups.count-1].Value.Trim()
-
-            if($sourceDate -eq "")
-            {
-                $logHistory.addWarningAndDisplay("La recherche de la date sur la page web n'a rien donné, veuillez contrôler la valeur de 'dateRegex' pour la source courante dans le fichier JSON")
-                continue
-            }
             
-            # Contrôle si la source a changé
-            $sourceStatusList = checkIfChanged -sourceStatusList $sourceStatusList -source $source -sourceDate $sourceDate -sourceType ([sourceType]::web)
-            # Mise à jour du fichier
-            $sourceStatusList | ConvertTo-Json | Out-file $sourcesStatusFile -Encoding:utf8
-        }
-        else # Pas pu trouver de date
-        {
-            $logHistory.addWarningAndDisplay("Pas possible de trouver la date de mise à jour, veuillez contrôler la valeur de 'dateRegex' pour la source courante dans le fichier JSON de configuration")
-        }
 
-    }# FIN BOUCLE de parcours des sources
+            switch($sourceTypeEnum)
+            {
+                # Sources de type "page web"
+                web 
+                {
+                    $sourceDate = handleWebSource -source $source
+                }
+
+                # Sources de types "fichier"
+                file
+                {
+                    $sourceDate = $null 
+                }
+            }
+
+            # Si on a pu trouver une date pour la source
+            if($null -ne $sourceDate)
+            {
+                # Contrôle si la source a changé
+                $sourceStatusList = checkIfChanged -sourceStatusList $sourceStatusList -source $source -sourceDate $sourceDate -sourceType $sourceTypeEnum
+                # Mise à jour du fichier
+                $sourceStatusList | ConvertTo-Json | Out-file $sourcesStatusFile -Encoding:utf8
+            }
+
+
+        }# FIN BOUCLE de parcours des sources du type courant
+
+    } # FIN BOUCLE de parcours des types de sources
 
     $sleepMin = 10
     $logHistory.addLine("Toutes les sources ont été contrôlées... attente de $($sleepMin) minutes jusqu'au prochain contrôle...")
