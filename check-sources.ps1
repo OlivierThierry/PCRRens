@@ -25,10 +25,11 @@ Enum sourceType {
                                         fichier JSON
     IN  : $sourceDate               -> Date trouvée pour la source à l'endroit où on doit la chercher
     IN  : $sourceType               -> Type de la source (web, fichier, etc...)
+    IN  : $speechSynthesizer        -> Objet pour parler
 
     RET : Objet $sourceStatusList mis à jour
 #>
-function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$sourceDate, [sourceType]$sourceType)
+function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$sourceDate, [sourceType]$sourceType, [System.Speech.Synthesis.SpeechSynthesizer]$speechSynthesizer)
 {
     $logHistory.addLine("> Dernière mise à jour de la source: $($sourceDate)")
     # Si date présente dans le fichier de log et différente de la courante
@@ -60,7 +61,7 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
         Write-Host ""
 
         # On fait une petite alerte sonore pour notifier de la mise à jour
-        soundAlert
+        soundAlert -speechSynthesizer $speechSynthesizer -message $source.textToSpeech
     }
 
     # Pour mettre à jour les infos dans le fichier log
@@ -206,6 +207,8 @@ function handleFileSource([PSObject]$source)
  --------------------------------- PROGRAMME PRINCIPAL ------------------------------------------
 #>
 
+Add-Type –AssemblyName System.Speech
+$speechSynthesizer = New-Object –TypeName System.Speech.Synthesis.SpeechSynthesizer
 
 $logName = "sources"
 $logHistory = [LogHistory]::new($logName, (Join-Path $PSScriptRoot "logs"), 30)
@@ -221,7 +224,6 @@ $logHistory.addLine("Chargement des sources de données 'web' depuis $($webSourc
 $webSources = Get-Content -Raw -Path $webSourcesFile | ConvertFrom-Json
 
 $fileSourcesFile = ([IO.Path]::Combine("$PSScriptRoot", "data", "file-sources.json"))
-#$webSourcesFile = ([IO.Path]::Combine("$PSScriptRoot", "data", "test-sources.json"))
 $logHistory.addLine("Chargement des sources de données 'file' depuis $($fileSourcesFile)")
 $fileSources = Get-Content -Raw -Path $fileSourcesFile | ConvertFrom-Json
 
@@ -294,7 +296,8 @@ While ($true)
             if($null -ne $sourceDate)
             {
                 # Contrôle si la source a changé
-                $sourceStatusList = checkIfChanged -sourceStatusList $sourceStatusList -source $source -sourceDate $sourceDate -sourceType $sourceTypeEnum
+                $sourceStatusList = checkIfChanged -sourceStatusList $sourceStatusList -source $source -sourceDate $sourceDate `
+                                                    -sourceType $sourceTypeEnum -speechSynthesizer $speechSynthesizer
                 # Mise à jour du fichier
                 $sourceStatusList | ConvertTo-Json | Out-file $sourcesStatusFile -Encoding:utf8
             }

@@ -18,7 +18,8 @@
         "actions": [
             "Télécharger le fichier PDF 'Rapport Hebdomadaire'",
             "Mettre à jour le slide 6 du Rapport (Lu uniquement)"
-        ]
+        ],
+        "textToSpeech": "Weekly OFSP web page has been updated"
     },
     {
         "name": "Vaud",
@@ -46,7 +47,9 @@
             "Imprimer la capture d'écran du fichier Excel et mettre à jour la feuille sur le panneau de la partie 'Cantonale'",
             "Faire la différence entre les chiffres des 2 derniers jours et compléter le tableau 'Situation actuelle'",
             "Mettre à jour le slide 7 du Rapport (Lu-Me-Ve) avec les nouveaux graphiques"
-        ]
+        ],
+        "textToSpeech": "Vaud web page has been updated"
+
     },
     {
         "name": "Covid-19 Switzerland",
@@ -73,7 +76,8 @@
             "Mettre à jour les données sur le calque 'Situation actuelle'",
             "Télécharger le fichier PDf sur la page web",
             "Mettre à jour le PowerPoint qui passe sur la TV avec les nouveaux graphiques présents dans le PDF"
-        ]
+        ],
+        "textToSpeech": "Covid 19 for Switzerland web page has been updated"
     },
     {
         "name": "InfoSAN Vaud",
@@ -99,7 +103,8 @@
         "actions": [
             "Télécharger le fichier PDF",
             "Imprimer le fichier et le glisser dans la fourre sur le panneau adéquat"
-        ]
+        ],
+        "textToSpeech": "InfoSAN Vaud web page has been updated"
     }
 
 ]
