@@ -106,7 +106,7 @@ class CallbackFunc
         )
         
         # Génération du nom du fichier de données
-        $outFile = $this.writeCSVFile("Covid19-Switzerland")
+        $outFile = $this.writeCSVFile("Covid19-Switzerland", @("Champ", "Valeur"), $fields)
         
         return $outFile
 
