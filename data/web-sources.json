@@ -79,7 +79,7 @@
             "Télécharger le fichier PDf sur la page web",
             "Mettre à jour le PowerPoint qui passe sur la TV avec les nouveaux graphiques présents dans le PDF"
         ],
-        "textToSpeech": "Covid 19 for Switzerland web page has been updated",
+        "textToSpeech": "Covid 19 for Switzerland web page has been updated. Please have a look at CSV generated file.",
         "callbackFunc": "extractActualSituationCH"
     },
     {
