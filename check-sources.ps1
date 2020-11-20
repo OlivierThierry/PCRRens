@@ -74,16 +74,28 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
     # Si on a des informations pour la source dans le fichier log
     if($null -ne $sourceStatus)
     {
-        # On supprime juste l'élément du tableau et on ajoute le nouveau (on met à jour en fait)
-        $sourceStatusList = [Array]($sourceStatusList | Where-Object { 
-            ($_.name -ne $sourceStatus.name) -and ($_.sourceType -eq $sourceType.ToString())})
-
-        # Si c'est égal à $null, c'est qu'il n'y a plus aucun élément donc on recréé un tableau vide
-        if($null -eq $sourceStatusList)
-        {
-            $sourceStatusList = @()
+        # Suppression de la source courante du tableau si elle s'y trouve
+        $updatedSourceStatusList = @()
+        $sourceStatusList | Foreach-Object { 
+            # Si le nom de la source correspond,
+            if($_.name -eq $sourceStatus.name)
+            {
+                # Si ce n'est pas le même type de source
+                if($_.sourceType -ne $sourceType.ToString())
+                {
+                    # Ce n'est pas la source courante
+                    $updatedSourceStatusList += $_
+                }
+            }
+            else # Le nom de la source ne correspond pas,
+            {
+                # On peut donc l'y ajouter dans tous les cas.
+                $updatedSourceStatusList += $_
+            }
         }
-    }
+        $sourceStatusList = $updatedSourceStatusList
+
+    }# FIN Si on a des informations sur la source dans le fichier Log
 
     # Ajout de l'élément qu'on a supprimé
     $sourceStatusList += $newSourceStatus
