@@ -26,7 +26,7 @@ function soundAlert([System.Speech.Synthesis.SpeechSynthesizer]$speechSynthesize
     # [System.Console]::Beep(1000, 100)
     # [System.Console]::Beep(2000, 100)
     # [System.Console]::Beep(1000, 100)
-    # [System.Console]::Beep(500, 100)
+    [System.Console]::Beep(500, 100)
 
     $speechSynthesizer.Speak($message)
 }
