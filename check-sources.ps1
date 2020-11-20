@@ -311,7 +311,7 @@ While ($true)
                     if($sourceTypeEnum -eq [sourceType]::web -and $source.callbackFunc -ne "")
                     {
                         # Création de la commande 
-                        $cmd = '$outFile = $callbackFunc.extractActualSituationCH($source)'
+                        $cmd = '$outFile = $callbackFunc.{0}($source)' -f $source.callbackFunc
                         Invoke-Expression $cmd
                         Write-Host "Un fichier de données a été généré depuis la page web, il peut être trouvé ici:`n$($outFile)"
                         
