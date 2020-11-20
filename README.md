@@ -33,7 +33,7 @@ En plus des opérations à effectuer manuellement, il est possible d'ajouter un 
 
 # Ajouter une nouvelle source de données
 
-## Web
+### Web
 Le descriptif des sources de données **web** se trouvent dans le fichier `data/web-sources.json`. Le format du fichier est le suivant:
 ```
 [
@@ -63,18 +63,28 @@ Le descriptif des sources de données **web** se trouvent dans le fichier `data/
     ...
 ```
 Voici un descriptif des différents champs intervenant dans la description d'une source web:
+
 **name** > Nom de la source, doit être unique pour toutes les sources Web.
+
 **location** > URL de la page web à surveiller.
+
 **searchFilter** > Liste des filtres de recherche qui sont appliquer en mode *ET* pour trouver un noeud HTML. 
+
    *attribute* > Nom de l'attribut du noeud que l'on cherche (ça peut être le type du noeud `tagName`, une classe appliquée `class` ou le texte contenu `innerText`)
+
    *operator* > Opérateur de comparaison PowerShell à utiliser (ex: `-eq`, `-like`, ...)
+
    *value* > Valeur à contrôler via *operator* pour valider que la condition est remplie (ça peut être le nom du noeud cherché ou la classe appliquée)
+
 **dateRegex** > Expression régulière à utiliser pour extraire la date dans le texte du noeud qui a été recherché via les valeurs de **searchFilter**. :warning: à faire en sorte de mettre entre parenthèses l'expression régulière qui fera ressortir la date.
+
 **actions** > Tableau avec la liste des actions à effectuer, dans l'ordre. Pas besoin de se préoccuper d'une éventuelle numérotation, celle-ci sera ajoutée automatiquement
+
 **textToSpeech** > Texte à lire dans les haut-parleurs lorsque la source est mise à jour. :warning: le texte doit être en anglais, car pas d'autre langue installée pour la fonctionnalité "Text-to-Speech"... 
+
 **callbackFunc** > Fonction à appeler lorsque la page web surveillée change. Cela permet par exemple d'extraire des informations de la page et de mettre celles-ci dans un fichier CSV. La fonction dont le nom est mis ici devra être présente dans la classe `WebCallbackFunc` ([fichier de la classe](https://github.com/LuluTchab/PCRRens/blob/main/include/CallbackFunc.inc.ps1))
 
-## File
+### File
 Le descriptif des sources de données **file** se trouvent dans le fichier `data/file-sources.json`. Le format du fichier est le suivant:
 ```
 [
@@ -87,6 +97,9 @@ Le descriptif des sources de données **file** se trouvent dans le fichier `data
 ]
 ```
 Voici un descriptif des différents champs intervenant dans la description d'une source file:
+
 **name** > Nom de la source, doit être unique parmi toutes les sources **file**
+
 **location** > Chemin jusqu'au fichier à surveiller. :warning tous les backslash `\` qui se trouvent dans le chemin d'accès doivent être doublés (`\\`), ceci est une "contrainte" de l'utilisation de fichiers JSON
+
 **textToSpeech** > Texte à lire dans les haut-parleurs lorsque la source est mise à jour. :warning: le texte doit être en anglais, car pas d'autre langue installée pour la fonctionnalité "Text-to-Speech"... 
