@@ -93,15 +93,15 @@ class CallbackFunc
             },
             @{
                 name = "OFSP - Nb. personnes en quarantaine"
-                value = $span14DaysList[14].innerText
+                value = $span14DaysList[17].innerText
             },
             @{
                 name = "OFSP - Nb. personnes en isolement"
-                value = $span14DaysList[13].innerText
+                value = $span14DaysList[16].innerText
             },
             @{
                 name = "OFSP - Nb. personnes en quarantaine (retour)"
-                value = $span14DaysList[15].innerText
+                value = $span14DaysList[18].innerText
             }
         )
         
