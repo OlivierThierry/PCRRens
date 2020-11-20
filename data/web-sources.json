@@ -19,7 +19,8 @@
             "Télécharger le fichier PDF 'Rapport Hebdomadaire'",
             "Mettre à jour le slide 6 du Rapport (Lu uniquement)"
         ],
-        "textToSpeech": "Weekly OFSP web page has been updated"
+        "textToSpeech": "Weekly OFSP web page has been updated",
+        "callbackFunc": ""
     },
     {
         "name": "Vaud",
@@ -48,7 +49,8 @@
             "Faire la différence entre les chiffres des 2 derniers jours et compléter le tableau 'Situation actuelle'",
             "Mettre à jour le slide 7 du Rapport (Lu-Me-Ve) avec les nouveaux graphiques"
         ],
-        "textToSpeech": "Vaud web page has been updated"
+        "textToSpeech": "Vaud web page has been updated",
+        "callbackFunc": ""
 
     },
     {
@@ -77,7 +79,8 @@
             "Télécharger le fichier PDf sur la page web",
             "Mettre à jour le PowerPoint qui passe sur la TV avec les nouveaux graphiques présents dans le PDF"
         ],
-        "textToSpeech": "Covid 19 for Switzerland web page has been updated"
+        "textToSpeech": "Covid 19 for Switzerland web page has been updated",
+        "callbackFunc": "extractActualSituationCH"
     },
     {
         "name": "InfoSAN Vaud",
@@ -104,7 +107,8 @@
             "Télécharger le fichier PDF",
             "Imprimer le fichier et le glisser dans la fourre sur le panneau adéquat"
         ],
-        "textToSpeech": "InfoSAN Vaud web page has been updated"
+        "textToSpeech": "InfoSAN Vaud web page has been updated",
+        "callbackFunc": ""
     }
 
 ]

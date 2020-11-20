@@ -2,6 +2,7 @@
 # https://www.pipehow.tech/invoke-webscrape/
 
 . ([IO.Path]::Combine("$PSScriptRoot", "include", "func.inc.ps1"))
+. ([IO.Path]::Combine("$PSScriptRoot", "include", "CallbackFunc.inc.ps1"))
 . ([IO.Path]::Combine("$PSScriptRoot", "include", "LogHistory.inc.ps1"))
 
 
@@ -9,11 +10,15 @@ Enum sourceType {
     web
     file
 }
+
+# Dossier où se trouveront les données générées
+$global:OUTPUT_FOLDER = ([IO.Path]::Combine("$PSScriptRoot", "extracted-data"))
+
+
 <#
  ------------------------------------------------------------------------------------------------
- --------------------------------- FONCTIONS ------------------------------------------
+ -------------------------------------- FONCTIONS -----------------------------------------------
 #>
-
 
 <#
     ---------------------------------------------------------------------------------------------
@@ -25,12 +30,14 @@ Enum sourceType {
                                         fichier JSON
     IN  : $sourceDate               -> Date trouvée pour la source à l'endroit où on doit la chercher
     IN  : $sourceType               -> Type de la source (web, fichier, etc...)
-    IN  : $speechSynthesizer        -> Objet pour parler
 
-    RET : Objet $sourceStatusList mis à jour
+    RET : Tableau avec:
+        [0] $true|$false pour dire si source mise à jour
+        [1] $sourceStatusList mis à jour
 #>
-function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$sourceDate, [sourceType]$sourceType, [System.Speech.Synthesis.SpeechSynthesizer]$speechSynthesizer)
+function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$sourceDate, [sourceType]$sourceType)
 {
+    $sourceHasChanged = $false
     $logHistory.addLine("> Dernière mise à jour de la source: $($sourceDate)")
     # Si date présente dans le fichier de log et différente de la courante
     # OU
@@ -44,6 +51,7 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
     {
         $logHistory.addLine("> La source a été mise à jour depuis la dernière vérification")
         
+        $sourceHasChanged = $true
         Write-Host ("{0} - " -f (Get-Date -format "yyyy-MM-dd HH:mm:ss")) -NoNewline -ForegroundColor:Green
         Write-host "'$($source.name)' mis à jour! => $($sourceDate)`n$($source.location)"
 
@@ -58,10 +66,6 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
             }
         }
         
-        Write-Host ""
-
-        # On fait une petite alerte sonore pour notifier de la mise à jour
-        soundAlert -speechSynthesizer $speechSynthesizer -message $source.textToSpeech
     }
 
     # Pour mettre à jour les infos dans le fichier log
@@ -101,7 +105,7 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
     # Ajout de l'élément qu'on a supprimé
     $sourceStatusList += $newSourceStatus
 
-    return $sourceStatusList
+    return @($sourceHasChanged, $sourceStatusList)
 }
 
 
@@ -212,6 +216,8 @@ $speechSynthesizer = New-Object –TypeName System.Speech.Synthesis.SpeechSynthe
 
 $logName = "sources"
 $logHistory = [LogHistory]::new($logName, (Join-Path $PSScriptRoot "logs"), 30)
+# Objet contenant les fonctions à appeler lorsqu'une source de donnée change
+$callbackFunc = [CallbackFunc]::new($global:OUTPUT_FOLDER)
 
 # Pour contenir toutes les sources
 $allSources = @{}
@@ -296,8 +302,25 @@ While ($true)
             if($null -ne $sourceDate)
             {
                 # Contrôle si la source a changé
-                $sourceStatusList = checkIfChanged -sourceStatusList $sourceStatusList -source $source -sourceDate $sourceDate `
-                                                    -sourceType $sourceTypeEnum -speechSynthesizer $speechSynthesizer
+                $sourceHasChanged, $sourceStatusList = checkIfChanged -sourceStatusList $sourceStatusList -source $source `
+                                                                        -sourceDate $sourceDate -sourceType $sourceTypeEnum
+                # Si la source a changé
+                if($sourceHasChanged)
+                {
+                    # Si on est en train de traiter une page web et qu'on a une fonction de callback à appeler
+                    if($sourceTypeEnum -eq [sourceType]::web -and $source.callbackFunc -ne "")
+                    {
+                        # Création de la commande 
+                        $cmd = '$outFile = $callbackFunc.extractActualSituationCH($source)'
+                        Invoke-Expression $cmd
+                        Write-Host "Un fichier de données a été généré depuis la page web, il peut être trouvé ici:`n$($outFile)"
+                        
+                    }
+                    # On fait une petite alerte sonore pour notifier de la mise à jour
+                    soundAlert -speechSynthesizer $speechSynthesizer -message $source.textToSpeech
+
+                    Write-Host ""
+                }
                 # Mise à jour du fichier
                 $sourceStatusList | ConvertTo-Json | Out-file $sourcesStatusFile -Encoding:utf8
             }
