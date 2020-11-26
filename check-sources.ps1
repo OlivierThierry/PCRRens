@@ -52,21 +52,25 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
         $logHistory.addLine("> La source a été mise à jour depuis la dernière vérification")
         
         $sourceHasChanged = $true
-        Write-Host ("{0} - " -f (Get-Date -format "yyyy-MM-dd HH:mm:ss")) -NoNewline -ForegroundColor:Green
+        Write-Host ("{0} - " -f (Get-Date -format "yyyy-MM-dd HH:mm:ss")) -NoNewline -BackgroundColor:DarkGreen
         Write-host "'$($source.name)' mis à jour! => $($sourceDate)`n$($source.location)"
 
+        # s'il y a des actions à effectuer
         if($source.actions.Count -gt 0)
         {
             # Affichage des actions à entreprendre
-            Write-Host "Actions à entreprendre:" -BackgroundColor:DarkGray 
+            Write-Host ">> Actions à entreprendre <<"
             $stepNo = 1
             $source.actions | ForEach-Object {
-                Write-Host "$($stepNo): $($_)"
+                # Gestion des retours à la ligne pouvant être présents dans l'action
+                $actionDesc = ($_ -replace "\\n", "`n")
+                Write-Host "$($stepNo): $($actionDesc)"
                 $stepNo++
             }
-        }
-        
-    }
+
+        } # FIN S'IL y a des actions à effectuer
+
+    } # FIN SI la source a changé
 
     # Pour mettre à jour les infos dans le fichier log
     $newSourceStatus = [PSCustomObject] @{
@@ -121,10 +125,13 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
 #>
 function handleWebSource([PSObject]$source)
 {
+    # Récupération de la page web
     $response = Invoke-WebRequest -uri $source.location
 
     $checkIn = "AllElements"
     $conditions = @()
+    # Création des filtres de recherche pour trouver l'élément HTML contenant l'information sur 
+    # la date de mise à jour des données
     $source.searchFilters | Foreach-Object { 
         $conditions += ('$_.{0} {1} "{2}"' -f $_.attribute, $_.operator, $_.value)
 
@@ -154,12 +161,13 @@ function handleWebSource([PSObject]$source)
         continue
     }
 
-    # Tentative d'extraire la date de mise à jour
+    # Tentative d'extraire la date de mise à jour à l'aide de l'expression régulière donnée dans le fichier de configuration
     $regexSearch = [Regex]::Match($result.innerText, $source.dateRegex)
 
     # Si on a pu trouver la date de mise à jour
     if($regexSearch.Success)
     {
+        # Extraction de la date
         $sourceDate = $regexSearch.Groups[$regexSearch.Groups.count-1].Value.Trim()
 
         if($sourceDate -eq "")
@@ -195,6 +203,7 @@ function handleFileSource([PSObject]$source)
     # Si le fichier existe
     if(Test-Path -Path $source.location)
     {
+        # Récupération de la date de modification du fichier et renvoi
         return (Get-Item -path $source.location).LastWriteTime.ToString()
     }
     else 
@@ -214,6 +223,7 @@ function handleFileSource([PSObject]$source)
 Add-Type –AssemblyName System.Speech
 $speechSynthesizer = New-Object –TypeName System.Speech.Synthesis.SpeechSynthesizer
 
+# Objet pour gérer le logging. Des fichiers seront créés au fur et à mesure dans le dossier "logs"
 $logName = "sources"
 $logHistory = [LogHistory]::new($logName, (Join-Path $PSScriptRoot "logs"), 30)
 # Objet contenant les fonctions à appeler lorsqu'une source de donnée change
@@ -240,7 +250,7 @@ if(($webSources.count -eq 0) -and ($fileSources.count -eq 0))
     exit
 }
 
-# Ajout de la source
+# Ajout des différentes sources dans une autre structure, afin qu'elle puisse être traitée après
 $allSources.add(([sourceType]::web).ToString(), $webSources )
 $allSources.add(([sourceType]::file).toString(), $fileSources)
 
@@ -253,11 +263,12 @@ if(!(Test-Path -Path $sourcesStatusFile))
     $logHistory.addLine("Fichier avec les dernières dates des sources non trouvé, un nouveau va être créé automatiquement")
     $sourceStatusList = @()
 }
-else
+else # Un fichier de suivi des modifications a été trouvé, on le charge.
 {
     $logHistory.addLine("Fichier avec les dernières dates des sources trouvé, chargement...")
     $sourceStatusList = [Array](Get-Content -Raw -Path $sourcesStatusFile | ConvertFrom-JSON )
 
+    # Affichage des infos trouvées dans le fichier
     Write-Host "Etat des sources" -BackgroundColor:DarkGray
     $sourceStatusList | ForEach-Object {
         Write-Host "$($_.name) ($($_.sourceType)) => $($_.date)"
@@ -285,20 +296,15 @@ While ($true)
             # En fonction du type de source (voir la définition du type enuméré 'sourceType')
             switch($sourceTypeEnum)
             {
-                # Sources de type "page web"
-                web 
-                {
-                    $sourceDate = handleWebSource -source $source
-                }
+                # Source de type "page web"
+                web { $sourceDate = handleWebSource -source $source }
 
-                # Sources de types "fichier"
-                file
-                {
-                    $sourceDate = handleFileSource -source $source
-                }
-            }
+                # Source de types "fichier"
+                file { $sourceDate = handleFileSource -source $source }
 
-            # Si on a pu trouver une date pour la source
+            }# FIN EN FONCTION du type de source
+
+            # Si on a pu trouver une date de modification pour la source
             if($null -ne $sourceDate)
             {
                 # Contrôle si la source a changé
@@ -323,8 +329,8 @@ While ($true)
                 }
                 # Mise à jour du fichier
                 $sourceStatusList | ConvertTo-Json | Out-file $sourcesStatusFile -Encoding:utf8
-            }
 
+            }# FIN SI on a pu trouver une date de modification pour la source
 
         }# FIN BOUCLE de parcours des sources du type courant
 
