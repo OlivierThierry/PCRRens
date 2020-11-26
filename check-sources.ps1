@@ -52,14 +52,14 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
         $logHistory.addLine("> La source a été mise à jour depuis la dernière vérification")
         
         $sourceHasChanged = $true
-        Write-Host ("{0} - " -f (Get-Date -format "yyyy-MM-dd HH:mm:ss")) -NoNewline -ForegroundColor:Green
+        Write-Host ("{0} - " -f (Get-Date -format "yyyy-MM-dd HH:mm:ss")) -NoNewline -BackgroundColor:DarkGreen
         Write-host "'$($source.name)' mis à jour! => $($sourceDate)`n$($source.location)"
 
         # s'il y a des actions à effectuer
         if($source.actions.Count -gt 0)
         {
             # Affichage des actions à entreprendre
-            Write-Host "Actions à entreprendre:" -BackgroundColor:DarkGray 
+            Write-Host ">> Actions à entreprendre <<"
             $stepNo = 1
             $source.actions | ForEach-Object {
                 # Gestion des retours à la ligne pouvant être présents dans l'action
@@ -67,9 +67,10 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
                 Write-Host "$($stepNo): $($actionDesc)"
                 $stepNo++
             }
-        }
-        
-    }
+
+        } # FIN S'IL y a des actions à effectuer
+
+    } # FIN SI la source a changé
 
     # Pour mettre à jour les infos dans le fichier log
     $newSourceStatus = [PSCustomObject] @{
