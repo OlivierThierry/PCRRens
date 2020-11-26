@@ -158,5 +158,60 @@ class WebCallbackFunc
         
     }
 
+
+    <#
+        -------------------------------------------------------------------------------------
+        BUT : Extrait les données qui sont présente sur le site suivant pour créer un fichier 
+                de données exploitables directement pour la mise à jour sur les panneaux
+            https://www.vd.ch/toutes-les-actualites/hotline-et-informations-sur-le-coronavirus/point-de-situation-statistique-dans-le-canton-de-vaud/
+        
+        IN  : $source     	-> Objet représentant la source que l'on traite
+        
+        RET : Chemin jusqu'au fichier de données créé
+    #>
+    [string] extractVaudSituation([PSObject]$source)
+    {
+        $response = Invoke-WebRequest -uri $source.location
+
+        # Recherche du lien qui pointe sur le fichier Excel de données
+        $excelLink = $response.Links | Where-Object { $_.innerText -like "*Donn*es compl*tes depuis*"}
+
+        # Fichier temporaire pour télécharger le fichier Excel
+        $tmpFile = New-TemporaryFile 
+        
+        # Téléchargement du fichier Excel
+        Invoke-WebRequest -Uri $excelLink.href -OutFile $tmpFile.FullName
+
+        $objExcel = New-Object -ComObject Excel.Application  
+        $workBook = $objExcel.Workbooks.Open($tmpFile.FullName)  
+        $workSheet = $workBook.Sheets.Item(1)
+
+        # Recherche des informations dans la page
+        $fields = @(
+            @(
+                "Vaud - NB nouveaux cas"
+                ($workSheet.Cells.Item(4,5).text - $workSheet.Cells.Item(5,5).text)
+            ),
+            @(
+                "Vaud - NB décès supp."
+                ($workSheet.Cells.Item(4,4).text - $workSheet.Cells.Item(5,4).text)
+            ),
+            @(
+                "Vaud - NB hospitalisations"
+                $workSheet.Cells.Item(4,2).text
+            ),
+            @(
+                "Vaud - NB hospitalisations soins intensifs"
+                $workSheet.Cells.Item(4,3).text
+            )
+        )
+
+        # Suppression du fichier temporaire
+        Remove-Item $tmpFile.FullName
+
+        # Génération du nom du fichier de données
+        return $this.writeCSVFile("Vaud-Stats", @("Champ", "Valeur"), $fields)
+    }
+
 }
 
