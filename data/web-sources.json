@@ -17,7 +17,7 @@
         "dateRegex": ".*?([0-9]{2,2}\\.[0-9]{2,2}\\.[0-9]{4,4}).*?",
         "actions": [
             "Télécharger le fichier PDF 'Rapport Hebdomadaire'",
-            "Mettre à jour le slide 6 du Rapport (Lu uniquement)"
+            "Mettre à jour le slide 6 du Rapport (pour lundi uniquement)"
         ],
         "textToSpeech": "Weekly OFSP web page has been updated",
         "callbackFunc": ""
@@ -44,9 +44,8 @@
         ],
         "dateRegex": ".*?([0-9]{2,2} [a-zA-Z]+ [0-9]{4,4}).*?",
         "actions":[
-            "Mettre à jour le PowerPoint qui passe sur la TV avec les nouveaux graphiques (attention, ils ne sont pas forcément mis à jour au même moment sur la page web)",
             "Imprimer la capture d'écran du fichier Excel et mettre à jour la feuille sur le panneau de la partie 'Cantonale'",
-            "Faire la différence entre les chiffres des 2 derniers jours et compléter le tableau 'Situation actuelle'",
+            "Faire la différence entre les chiffres des 2 derniers jours et compléter le tableau 'Situation actuelle' pour les champs suivants:\\nNb nouveaux cas\\nNb décès supplémentaires\\nNb hospitalisations\\nNb hospitalisation soins intensifs",
             "Mettre à jour le slide 7 du Rapport (Lu-Me-Ve) avec les nouveaux graphiques"
         ],
         "textToSpeech": "Vaud web page has been updated",
@@ -75,9 +74,7 @@
         ],
         "dateRegex": ".*?([0-9]{2,2} [a-zA-Z]+ [0-9]{4,4}).*?",
         "actions": [
-            "Mettre à jour les données sur le calque 'Situation actuelle' à l'aide du contenu du fichier CSV généré",
-            "Télécharger le fichier PDf sur la page web",
-            "Mettre à jour le PowerPoint qui passe sur la TV avec les nouveaux graphiques présents dans le PDF"
+            "Mettre à jour les données sur le calque 'Situation actuelle' à l'aide du contenu du fichier CSV généré"
         ],
         "textToSpeech": "Covid 19 for Switzerland web page has been updated. Please have a look at CSV generated file.",
         "callbackFunc": "extractActualSituationCH"
