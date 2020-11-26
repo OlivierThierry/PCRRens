@@ -23,10 +23,10 @@ class WebCallbackFunc
         BUT : Génère un fichier CSV avec les infos passées et renvoie le chemin jusqu'à celui-ci'
         
         IN  : $fileId     	-> Id du fichier, sera utilisé pour générer le nom.
-        IN  : $csvHeader    -> Tableau avec les 2 colonnes à utiliser pour le Header du CSV
-        IN  : $csvData      -> Tableau dont chaque élément est un dictionnaire avec:
-                                .name -> colonne 1
-                                .value -> colonne 2
+        IN  : $csvHeader    -> Tableau avec les colonnes à utiliser pour le Header du CSV
+        IN  : $csvData      -> Tableau dont chaque élément est en fait une ligne du fichier CSV. 
+                                Chaque ligne est représentée par un tableau avec les données, 
+                                une case du tableau par colonne du fichier CSV
         
         RET : Chemin jusqu'au fichier de données
     #>
@@ -36,10 +36,11 @@ class WebCallbackFunc
         $date =(Get-Date -format "yyyy-MM-dd")
         $csvFile = ([IO.Path]::Combine($this.outputFolder, "$($fileId)_$($date).csv"))
 
-        # Création du fichier de données
+        # Création du fichier de données, on commence par l'entête
         $csvHeader -join ";" | Out-File $csvFile -Encoding:utf8
+        # Ajout des lignes de données dans le fichier
         $csvData | ForEach-Object {
-            "$($_.name);$($_.value)" | Out-File $csvFile -Append -Encoding:utf8
+            $_ -join ";" | Out-File $csvFile -Append -Encoding:utf8
         }
 
         return $csvFile
@@ -102,54 +103,54 @@ class WebCallbackFunc
 
         # Recherche des informations dans la page
         $fields = @(
-            @{
-                name = "OFSP - NB nouveaux cas"
-                value = $this.findInPage($webPage14Days, @("Laboratory-confirmed cases", `
-                                                            "Difference to previous day", `
-                                                            'bag-key-value-list__entry-value">'), "<")
-            },
-            @{
-                name = "OFSP - Nb de cas pour 100'000 habitants sur 14 derniers jours"
-                value = $this.findInPage($webPage14Days, @("Laboratory-confirmed cases", `
-                                                            "Per 100 000 inhabitants", `
-                                                            'bag-key-value-list__entry-value">'), "<")
-            },
-            @{
-                name = "OFSP - Nb de décès sup."
-                value = $this.findInPage($webPage14Days, @("Laboratory-confirmed deaths", `
-                                                            "Difference to previous day", `
-                                                            'bag-key-value-list__entry-value">'), "<")
-            },
-            @{
-                name= "OFSP - Nb. hospitalisations"
-                value = $this.findInPage($webPageAll, @("Laboratory-confirmed hospitalisations", `
+            @(
+                "OFSP - NB nouveaux cas"
+                $this.findInPage($webPage14Days, @("Laboratory-confirmed cases", `
+                                                    "Difference to previous day", `
+                                                    'bag-key-value-list__entry-value">'), "<")
+            ),
+            @(
+                "OFSP - Nb de cas pour 100'000 habitants sur 14 derniers jours"
+                $this.findInPage($webPage14Days, @("Laboratory-confirmed cases", `
+                                                    "Per 100 000 inhabitants", `
+                                                    'bag-key-value-list__entry-value">'), "<")
+            ),
+            @(
+                "OFSP - Nb de décès sup."
+                $this.findInPage($webPage14Days, @("Laboratory-confirmed deaths", `
+                                                    "Difference to previous day", `
+                                                    'bag-key-value-list__entry-value">'), "<")
+            ),
+            @(
+                "OFSP - Nb. hospitalisations"
+                $this.findInPage($webPageAll, @("Laboratory-confirmed hospitalisations", `
                                                             "Total since ", `
                                                             'bag-key-value-list__entry-value">'), "<")
-            },
-            @{
-                name = "OFSP - Nb. tests PCR positif sup."
-                value = $this.findInPage($webPage14Days, @("Tests and share of positive tests", `
+            ),
+            @(
+                "OFSP - Nb. tests PCR positif sup."
+                $this.findInPage($webPage14Days, @("Tests and share of positive tests", `
                                                             "Difference to previous day", `
                                                             'bag-key-value-list__entry-value">'), "<")
-            },
-            @{
-                name = "OFSP - Nb. personnes en quarantaine"
-                value = $this.findInPage($webPage14Days, @("Contact tracing", `
+            ),
+            @(
+                "OFSP - Nb. personnes en quarantaine"
+                $this.findInPage($webPage14Days, @("Contact tracing", `
                                                             "In quarantine", `
                                                             'bag-key-value-list__entry-value">'), "<")
-            },
-            @{
-                name = "OFSP - Nb. personnes en isolement"
-                value = $this.findInPage($webPage14Days, @("Contact tracing", `
+            ),
+            @(
+                "OFSP - Nb. personnes en isolement"
+                $this.findInPage($webPage14Days, @("Contact tracing", `
                                                             "In isolation", `
                                                             'bag-key-value-list__entry-value">'), "<")
-            },
-            @{
-                name = "OFSP - Nb. personnes en quarantaine (retour)"
-                value = $this.findInPage($webPage14Days, @("Contact tracing", `
+            ),
+            @(
+                "OFSP - Nb. personnes en quarantaine (retour)"
+                $this.findInPage($webPage14Days, @("Contact tracing", `
                                                             "Additionally in quarantine", `
                                                             'bag-key-value-list__entry-value">'), "<")
-            }
+            )
         )
         
         # Génération du nom du fichier de données
