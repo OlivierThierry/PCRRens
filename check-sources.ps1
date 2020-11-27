@@ -157,8 +157,8 @@ function handleWebSource([PSObject]$source)
     # Si les filtres définis ne sont pas assez précis et que plusieurs résultats sont renvoyés,
     if($result -is [System.Array])
     {
-        $logHistory.addWarningAndDisplay("Plus d'un élément pouvant contenir l'information de trouvé. Veuillez contrôler la valeur de 'searchFilters'  dans le fichier ($($webSourcesFile)) pour ajouter plus de précision à la recherche")
-        continue
+        $logHistory.addWarningAndDisplay("Plus d'un élément pouvant contenir l'information de trouvé. C'est le premier qui a va etre pris.")
+        $result = $result[0]
     }
 
     # Tentative d'extraire la date de mise à jour à l'aide de l'expression régulière donnée dans le fichier de configuration
