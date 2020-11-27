@@ -22,10 +22,10 @@ function objectPropertyExists([PSCustomObject]$obj, [string]$propertyName)
 #>
 function soundAlert([System.Speech.Synthesis.SpeechSynthesizer]$speechSynthesizer, [string]$message)
 {
-    # [System.Console]::Beep(500, 100)
+    [System.Console]::Beep(500, 100)
     # [System.Console]::Beep(1000, 100)
     # [System.Console]::Beep(2000, 100)
-    # [System.Console]::Beep(1000, 100)
+    [System.Console]::Beep(1000, 100)
     [System.Console]::Beep(500, 100)
 
     $speechSynthesizer.Speak($message)
