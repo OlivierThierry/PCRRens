@@ -76,7 +76,7 @@
         ],
         "dateRegex": ".*?([0-9]{2,2} [a-zA-Z]+ [0-9]{4,4}).*?",
         "actions": [
-            "Mettre à jour les données sur le calque \"Situation actuelle\" à l'aide du contenu du fichier CSV généré"
+            "Mettre à jour les données sur le tableau \"Situation actuelle\" à l'aide du contenu du fichier CSV généré"
         ],
         "textToSpeech": "Covid 19 for Switzerland web page has been updated. Please have a look at CSV generated file.",
         "callbackFunc": "extractActualSituationCH"
@@ -107,6 +107,33 @@
             "Imprimer le fichier et le glisser dans la fourre sur le panneau \"Situation actuelle de l'épidémie\""
         ],
         "textToSpeech": "InfoSAN Vaud web page has been updated",
+        "callbackFunc": ""
+    },
+    {
+        "name": "Point épidémiologique",
+        "location": "https://www.infosan.vd.ch/resultat-de-la-recherche/search/point%20%C3%A9pid%C3%A9miologique/filter0/type-publication/?tx_solr%5Bsort%5D=changed_desc%20desc",
+        "searchFilters": [
+            {
+                "attribute": "tagName",
+                "operator": "-eq",
+                "value": "div"
+            },
+            {
+                "attribute": "class",
+                "operator": "-eq",
+                "value": "tile-left"
+            },
+            {
+                "attribute": "innerHTML",
+                "operator": "-like",
+                "value": "<p>*</p>*"
+            }
+        ],
+        "dateRegex": ".*?([0-9]{2,2}\\.[0-9]{2,2}\\.[0-9]{4,4}).*?",
+        "actions":[
+            "Télécharger et imprimer le fichier Excel puis le mettre dans la fourre sur le panneau \"Situation actuelle de l'épidémie\""
+        ],
+        "textToSpeech": "Epidemiologic point updated",
         "callbackFunc": ""
     }
 
