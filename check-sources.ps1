@@ -2,6 +2,7 @@
 # https://www.pipehow.tech/invoke-webscrape/
 
 . ([IO.Path]::Combine("$PSScriptRoot", "include", "func.inc.ps1"))
+. ([IO.Path]::Combine("$PSScriptRoot", "include", "WebSearchFunc.inc.ps1"))
 . ([IO.Path]::Combine("$PSScriptRoot", "include", "WebCallbackFunc.inc.ps1"))
 . ([IO.Path]::Combine("$PSScriptRoot", "include", "LogHistory.inc.ps1"))
 
@@ -125,66 +126,81 @@ function checkIfChanged([Array]$sourceStatusList, [PSObject]$source, [string]$so
 #>
 function handleWebSource([PSObject]$source)
 {
-    # Récupération de la page web
-    $response = Invoke-WebRequest -uri $source.location
 
-    $checkIn = "AllElements"
-    $conditions = @()
-    # Création des filtres de recherche pour trouver l'élément HTML contenant l'information sur 
-    # la date de mise à jour des données
-    $source.searchFilters | Foreach-Object { 
-        $conditions += ('$_.{0} {1} "{2}"' -f $_.attribute, $_.operator, $_.value)
+    # Si on a une fonction de recherche
+    if($source.searchFunc -ne "")
+    {
+        $cmd = '$result = $webSearchFunc.{0}($source)' -f $source.searchFunc
 
-        # Si l'élément qu'on cherche est un lien, on fait en sorte de ne chercher que parmis
-        # les liens par la suite.
-        if(($_.attribute -eq "tagName") -and ($_.value -eq "a"))
-        {
-            $checkIn = "Links"
+        Invoke-Expression $cmd
+
+        return $result
+    }
+    else # On passe par des filtres
+    {
+        # Récupération de la page web
+        $response = Invoke-WebRequest -uri $source.location
+
+        $checkIn = "AllElements"
+        $conditions = @()
+        # Création des filtres de recherche pour trouver l'élément HTML contenant l'information sur 
+        # la date de mise à jour des données
+        $source.searchFilters | Foreach-Object { 
+            $conditions += ('$_.{0} {1} "{2}"' -f $_.attribute, $_.operator, $_.value)
+
+            # Si l'élément qu'on cherche est un lien, on fait en sorte de ne chercher que parmis
+            # les liens par la suite.
+            if(($_.attribute -eq "tagName") -and ($_.value -eq "a"))
+            {
+                $checkIn = "Links"
+            }
         }
-    }
 
-    $logHistory.addLine("> Recherche de la date de mise à jour de la page $($source.location)")
-    $cmd = '$result = $response.{0} | Where-Object {{ {1} }}' -f $checkIn, ($conditions -join " -and ")
-    Invoke-Expression $cmd
+        $logHistory.addLine("> Recherche de la date de mise à jour de la page $($source.location)")
+        $cmd = '$result = $response.{0} | Where-Object {{ {1} }}' -f $checkIn, ($conditions -join " -and ")
+        Invoke-Expression $cmd
 
-    # Si pas de résultat trouvé
-    if($null -eq $result)
-    {
-        $logHistory.addWarningAndDisplay("Pas possible de trouver l'élément contenant l'information dans la page. Veuillez contrôler la valeur de 'searchFilters' dans le fichier de configuration ($($webSourcesFile))")
-        continue
-    }
-
-    # Si les filtres définis ne sont pas assez précis et que plusieurs résultats sont renvoyés,
-    if($result -is [System.Array])
-    {
-        $logHistory.addWarningAndDisplay("Plus d'un élément pouvant contenir l'information de trouvé. C'est le premier qui a va etre pris.")
-        $result = $result[0]
-    }
-
-    # Tentative d'extraire la date de mise à jour à l'aide de l'expression régulière donnée dans le fichier de configuration
-    $regexSearch = [Regex]::Match($result.innerText, $source.dateRegex)
-
-    # Si on a pu trouver la date de mise à jour
-    if($regexSearch.Success)
-    {
-        # Extraction de la date
-        $sourceDate = $regexSearch.Groups[$regexSearch.Groups.count-1].Value.Trim()
-
-        if($sourceDate -eq "")
+        # Si pas de résultat trouvé
+        if($null -eq $result)
         {
-            $logHistory.addWarningAndDisplay("La recherche de la date sur la page web n'a rien donné, veuillez contrôler la valeur de 'dateRegex' pour la source courante dans le fichier JSON")
-            return $null
+            $logHistory.addWarningAndDisplay("Pas possible de trouver l'élément contenant l'information dans la page. Veuillez contrôler la valeur de 'searchFilters' dans le fichier de configuration ($($webSourcesFile))")
+            continue
         }
-        
-        return $sourceDate
-        
-    }
-    else # Pas pu trouver de date
-    {
-        $logHistory.addWarningAndDisplay("Pas possible de trouver la date de mise à jour, veuillez contrôler la valeur de 'dateRegex' pour la source courante dans le fichier JSON de configuration")
+
+        # Si les filtres définis ne sont pas assez précis et que plusieurs résultats sont renvoyés,
+        if($result -is [System.Array])
+        {
+            $logHistory.addWarningAndDisplay("Plus d'un élément pouvant contenir l'information de trouvé. C'est le premier qui a va etre pris.")
+            $result = $result[0]
+        }
+
+        # Tentative d'extraire la date de mise à jour à l'aide de l'expression régulière donnée dans le fichier de configuration
+        $regexSearch = [Regex]::Match($result.innerText, $source.dateRegex)
+
+        # Si on a pu trouver la date de mise à jour
+        if($regexSearch.Success)
+        {
+            # Extraction de la date
+            $sourceDate = $regexSearch.Groups[$regexSearch.Groups.count-1].Value.Trim()
+
+            if($sourceDate -eq "")
+            {
+                $logHistory.addWarningAndDisplay("La recherche de la date sur la page web n'a rien donné, veuillez contrôler la valeur de 'dateRegex' pour la source courante dans le fichier JSON")
+                return $null
+            }
+            
+            return $sourceDate
+            
+        }
+        else # Pas pu trouver de date
+        {
+            $logHistory.addWarningAndDisplay("Pas possible de trouver la date de mise à jour, veuillez contrôler la valeur de 'dateRegex' pour la source courante dans le fichier JSON de configuration")
+        }
+
+        return $null
     }
 
-    return $null
+    
 }
 
 
@@ -228,6 +244,7 @@ $logName = "sources"
 $logHistory = [LogHistory]::new($logName, (Join-Path $PSScriptRoot "logs"), 30)
 # Objet contenant les fonctions à appeler lorsqu'une source de donnée change
 $webCallbackFunc = [WebCallbackFunc]::new($global:OUTPUT_FOLDER)
+$webSearchFunc = [WebSearchFunc]::new()
 
 # Pour contenir toutes les sources
 $allSources = @{}
