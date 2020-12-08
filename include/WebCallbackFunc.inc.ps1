@@ -198,14 +198,14 @@ class WebCallbackFunc : WebSearchFunc
         $smtp = new-object Net.Mail.SmtpClient($smtpServer) 
         $smtp.EnableSsl = $true 
         $msg.From = $mailParams.username
-        $msg.To.Add($mailParams.mailTo) 
+        $mailParams.mailTo | ForEach-Object { $msg.to.Add($_) }
         $msg.BodyEncoding = [system.Text.Encoding]::Unicode 
         $msg.SubjectEncoding = [system.Text.Encoding]::Unicode 
         $msg.IsBodyHTML = $true  
         $msg.Subject = $mailParams.mailSubject
         $msg.Body = $mailMessage
         $SMTP.Credentials = New-Object System.Net.NetworkCredential($mailParams.username, $mailParams.password); 
-        Write-Host ("Source changée! envoi d'un mail à {0}" -f $mailParams.mailTo)
+        Write-Host ("Source changée! envoi d'un mail à {0}" -f ($mailParams.mailTo -join ","))
         $smtp.Send($msg)
         Write-Host "Et on sort..."
         exit
