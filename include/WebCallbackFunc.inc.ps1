@@ -179,5 +179,38 @@ class WebCallbackFunc : WebSearchFunc
         return $this.writeCSVFile("Vaud-Stats", @("Champ", "Valeur"), $fields)
     }
 
+
+    [void] sezaneDone([PSObject]$source)
+    {
+        $mailConfigFile = ([IO.Path]::Combine("$PSScriptRoot", "..", "data", "mail-config.json"))
+        if(! (Test-Path $mailConfigFile))
+        {
+            Throw "Mail config file not found!"
+        }
+
+        $mailParams = Get-Content $mailConfigFile | ConvertFrom-JSON
+        $mailMessage = $mailParams.mailMessage -f $source.location
+
+        $smtpServer = "smtp.gmail.com" 
+         
+         
+        $msg = new-object Net.Mail.MailMessage 
+        $smtp = new-object Net.Mail.SmtpClient($smtpServer) 
+        $smtp.EnableSsl = $true 
+        $msg.From = $mailParams.username
+        $msg.To.Add($mailParams.mailTo) 
+        $msg.BodyEncoding = [system.Text.Encoding]::Unicode 
+        $msg.SubjectEncoding = [system.Text.Encoding]::Unicode 
+        $msg.IsBodyHTML = $true  
+        $msg.Subject = $mailParams.mailSubject
+        $msg.Body = $mailMessage
+        $SMTP.Credentials = New-Object System.Net.NetworkCredential($mailParams.username, $mailParams.password); 
+        Write-Host ("Source changée! envoi d'un mail à {0}" -f $mailParams.mailTo)
+        $smtp.Send($msg)
+        Write-Host "Et on sort..."
+        exit
+        
+    }
+
 }
 

@@ -1,18 +1,5 @@
 ﻿[
     {
-        "name": "Gilet Achille",
-        "location": "https://www.sezane.com/fr/product/gilet-achille/rose-chine#size-S",
-        "searchFilters": [
-        ],
-        "searchFunc":"findGiletAchille",
-        "dateRegex": "",
-        "actions": [
-            "Go acheter"
-        ],
-        "textToSpeech": "Achille vest now available in small size",
-        "callbackFunc": ""
-    },
-    {
         "name": "Robe Barbara",
         "location": "https://www.sezane.com/fr/product/robe-barbara/leopard#size-38",
         "searchFilters": [
@@ -23,7 +10,7 @@
             "Go acheter"
         ],
         "textToSpeech": "Barbara dress now available in 38 size",
-        "callbackFunc": ""
+        "callbackFunc": "sezaneDone"
     }
 
 
